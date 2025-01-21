@@ -43,20 +43,24 @@ function App() {
         "dev": "nodemon"
       },
       "dependencies": {
-        "@types/express": "^4.17.13",
-        "@types/node": "^16.11.7",
-        "express": "^4.17.1",
-        "apollo-server-express": "^3.6.1",
-        "graphql": "^15.8.0",
-        "pg": "^8.7.1",
+        "@types/express": "^4.17.17",
+        "@types/node": "^20.3.1",
+        "express": "^4.18.2",
+        "apollo-server-express": "^3.12.0",
+        "graphql": "^16.7.1",
+        "pg": "^8.11.0",
         "reflect-metadata": "^0.1.13",
-        "type-graphql": "^1.1.1",
-        "typeorm": "^0.2.41",
-        "typescript": "^4.5.2"
+        "type-graphql": "^2.0.0-beta.2",
+        "typeorm": "^0.3.17",
+        "typescript": "^5.1.3"
       },
       "devDependencies": {
-        "nodemon": "^2.0.15",
-        "ts-node": "^10.4.0"
+        "nodemon": "^2.0.22",
+        "ts-node": "^10.9.1",
+        "semver": "^7.5.3"
+      },
+      "overrides": {
+        "semver": "^7.5.3"
       }
     }, null, 2));
 
