@@ -3,6 +3,8 @@
   --secondary: #61dafb;
   --background: #282c34;
   --text: #ffffff;
+  --success: #4caf50;
+  --error: #f44336;
 }
 
 body {
@@ -26,6 +28,30 @@ body {
   align-items: center;
   padding: 10px 20px;
   background: var(--primary);
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 20px;
+}
+
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+}
+
+.status-indicator.connected {
+  background-color: var(--success);
+  box-shadow: 0 0 8px var(--success);
+}
+
+.status-indicator.disconnected {
+  background-color: var(--error);
+  box-shadow: 0 0 8px var(--error);
 }
 
 .download-btn {
@@ -68,11 +94,18 @@ body {
   border-radius: 8px;
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
 .generated-ui {
   margin-top: 20px;
   border: 1px solid #4a4d5e;
   padding: 15px;
   border-radius: 4px;
+  overflow-x: auto;
 }
 
 .error {
