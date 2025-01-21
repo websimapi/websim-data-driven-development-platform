@@ -1,6 +1,5 @@
 const { useState, useEffect } = React;
 
-// Sample default schema
 const DEFAULT_SCHEMA = `
 type User {
   id: ID!
@@ -47,6 +46,8 @@ function App() {
         "@types/express": "^4.17.13",
         "@types/node": "^16.11.7",
         "express": "^4.17.1",
+        "apollo-server-express": "^3.6.1",
+        "graphql": "^15.8.0",
         "pg": "^8.7.1",
         "reflect-metadata": "^0.1.13",
         "type-graphql": "^1.1.1",
@@ -119,6 +120,31 @@ The GraphQL playground will be available at \`http://localhost:4000/graphql\`
     // Create src directory structure
     const src = zip.folder("src");
     
+    // Add database config
+    src.file("config/database.ts", `
+import { ConnectionOptions } from "typeorm";
+import path from "path";
+
+export const dbConfig: ConnectionOptions = {
+  type: "postgres",
+  host: "localhost",
+  port: 5432,
+  username: "postgres",
+  password: "postgres",
+  database: "data_driven_db",
+  synchronize: true,
+  logging: true,
+  entities: [path.join(__dirname, "../entities/**/*.ts")],
+  migrations: [path.join(__dirname, "../migrations/**/*.ts")],
+  subscribers: [path.join(__dirname, "../subscribers/**/*.ts")],
+  cli: {
+    entitiesDir: "src/entities",
+    migrationsDir: "src/migrations",
+    subscribersDir: "src/subscribers",
+  },
+};
+`.trim());
+
     // Add main server file
     src.file("index.ts", `
 import "reflect-metadata";
@@ -176,39 +202,56 @@ bootstrap().catch(console.error);
   };
 
   const generateEntities = (schemaText) => {
-    // This is a simplified parser - in production you'd want to use a proper GraphQL parser
     const entities = {};
-    const types = schemaText.split('type').filter(t => t.trim());
-    
-    types.forEach(type => {
-      const [name, ...fields] = type.split('\n').map(l => l.trim()).filter(l => l);
-      const className = name.split('{')[0].trim();
+    const typeRegex = /type\s+(\w+)\s*{([^}]+)}/g;
+    let match;
+
+    while ((match = typeRegex.exec(schemaText)) !== null) {
+      const [_, typeName, fieldsText] = match;
+      const fields = fieldsText.trim().split('\n').map(f => f.trim()).filter(f => f);
       
-      entities[className] = `
+      const fieldDefinitions = fields.map(field => {
+        const [name, type] = field.split(':').map(p => p.trim());
+        const isRequired = type.endsWith('!');
+        const baseType = type.replace(/[!\[\]]/g, '');
+        const isList = type.includes('[');
+        
+        if (baseType === 'ID') {
+          return `
+  @Field(() => ID)
+  @PrimaryGeneratedColumn()
+  ${name}: number;`;
+        } else if (baseType === 'String') {
+          return `
+  @Field()
+  @Column()
+  ${name}: string;`;
+        } else {
+          // Relationship field
+          if (isList) {
+            return `
+  @Field(() => [${baseType}])
+  @OneToMany(() => ${baseType}, ${baseType.toLowerCase()} => ${baseType.toLowerCase()}.${typeName.toLowerCase()})
+  ${name}: ${baseType}[];`;
+          } else {
+            return `
+  @Field(() => ${baseType})
+  @ManyToOne(() => ${baseType}, ${baseType.toLowerCase()} => ${baseType.toLowerCase()}.${name})
+  ${name}: ${baseType};`;
+          }
+        }
+      });
+
+      entities[typeName] = `
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany } from "typeorm";
 import { ObjectType, Field, ID } from "type-graphql";
+${Object.keys(entities).map(e => `import { ${e} } from "./${e}";`).join('\n')}
 
 @Entity()
 @ObjectType()
-export class ${className} {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  ${fields.map(field => {
-    const [fieldName, fieldType] = field.split(':').map(f => f.trim());
-    if (fieldType.endsWith('!')) {
-      return `
-  @Field()
-  @Column()
-  ${fieldName}: string;
-      `.trim();
+export class ${typeName} {${fieldDefinitions.join('')}
+}`;
     }
-    return '';
-  }).join('\n\n')}
-}
-      `.trim();
-    });
 
     return entities;
   };
@@ -232,9 +275,8 @@ export class ${className} {
       </div>
 
       <div className="preview-section">
-        <h2>Generated UI Preview</h2>
+        <h2>Generated Entities Preview</h2>
         <div className="generated-ui">
-          {/* This would show a live preview of the generated UI based on the schema */}
           <pre>{JSON.stringify(generateEntities(schema), null, 2)}</pre>
         </div>
       </div>
